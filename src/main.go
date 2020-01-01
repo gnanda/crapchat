@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	handler := chatpage.ChatServer{}
+	handler := chatpage.New() //ChatServer{}
 	http.Handle("/", http.FileServer(http.Dir("src/chatpage/static")))
 	http.HandleFunc("/send_message", handler.SendMessage)
 	http.HandleFunc("/messages", websocket.Handler(handler.GetMessages))

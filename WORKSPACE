@@ -41,18 +41,36 @@ go_repository(
     version = "v0.8.1",
 )
 
-# go web sockets
 go_repository(
-    name = "com_github_net",
-    importpath = "github.com/golang/net",
-		version = "latest",
-		# commit = "c0dbc17a35534bf2e581d7a942408dc936316da4",
-    # sum = "h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=",
-    # version = "v0.8.1",
-    # importpath = "golang.org/x/net/websocket",
-    # sum = "h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=",
-    # version = "master",
+    name = "org_golang_x_net",
+    importpath = "golang.org/x/net",
+    urls = [
+        "https://codeload.github.com/golang/net/tar.gz/16b79f2e4e95ea23b2bf9903c9809ff7b013ce85", # master, as of 2019-03-3
+    ],
+    strip_prefix = "net-16b79f2e4e95ea23b2bf9903c9809ff7b013ce85",
+    type = "tar.gz",
+    # gazelle args: -go_prefix golang.org/x/net -proto disable
 )
+
+# # go sys
+# go_repository(
+#     name = "com_github_sys",
+#     importpath = "github.com/golang/sys",
+# 		commit = "04cbcbbfeed8aa0b2b010b2ddab558e9f717fd3e",
+# )
+
+# # go net
+# go_repository(
+#     name = "com_github_net",
+#     importpath = "github.com/golang/net",
+# 		commit = "c0dbc17a35534bf2e581d7a942408dc936316da4",
+# 		build_file_name = ":net.BUILD",
+#     # sum = "h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=",
+#     # version = "v0.8.1",
+#     # importpath = "golang.org/x/net/websocket",
+#     # sum = "h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=",
+#     # version = "master",
+# )
 
 # The Bazel buildtools repo contains tools like the BUILD file formatter, buildifier
 # This commit matches the version of buildifier in angular/ngcontainer
