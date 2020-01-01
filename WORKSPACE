@@ -1,4 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # Download the Go rules
 http_archive(
@@ -40,10 +41,27 @@ go_repository(
     version = "v0.8.1",
 )
 
-# Add a go repository
+# go web sockets
 go_repository(
-		name = "com_github_stripe",
-		importpath = "github.com/stripe/stripe-go",
-		sum = "h1:FEn1D5ARao1WTplF0mJX0qb7eu6+yNvgHcYAG2k4/Ec=",
-		version = "v67.3.0",
-		)
+    name = "com_github_net",
+    importpath = "github.com/golang/net",
+		version = "latest",
+		# commit = "c0dbc17a35534bf2e581d7a942408dc936316da4",
+    # sum = "h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=",
+    # version = "v0.8.1",
+    # importpath = "golang.org/x/net/websocket",
+    # sum = "h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=",
+    # version = "master",
+)
+
+# The Bazel buildtools repo contains tools like the BUILD file formatter, buildifier
+# This commit matches the version of buildifier in angular/ngcontainer
+# If you change this, also check if it matches the version in the angular/ngcontainer
+# version in /.circleci/config.yml
+BAZEL_BUILDTOOLS_VERSION = "49a6c199e3fbf5d94534b2771868677d3f9c6de9"
+http_archive(
+    name = "com_github_bazelbuild_buildtools",
+    url = "https://github.com/bazelbuild/buildtools/archive/%s.zip" % BAZEL_BUILDTOOLS_VERSION,
+    strip_prefix = "buildtools-%s" % BAZEL_BUILDTOOLS_VERSION,
+    sha256 = "edf39af5fc257521e4af4c40829fffe8fba6d0ebff9f4dd69a6f8f1223ae047b",
+)

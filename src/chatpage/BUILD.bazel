@@ -11,21 +11,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+package(default_visibility = ["//visibility:public"])
+
 
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
-# gazelle:prefix github.com/example/project
 gazelle(name = "gazelle")
 
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 
-go_binary(
-    name = "main",
-    srcs = ["main.go"],
-		# data = glob(["src/chatpage/*"]) + ["//src/chatpage:static/main.html"],
-		data = glob(["src/chatpage/static/*"]),
+go_library(
+    name = "chatpage",
+    srcs = ["chatpage.go"],
+		# data = ["client/client.html"],
+		data = glob(["static/*"]),
+    importpath = "github.com/gnanda/crapchat/chatpage",
+		visibility = ["//src:__pkg__"],
+    deps = [],
+)
+
+go_test(
+    name = "chatpage_test",
+    srcs = ["chatpage_test.go"],
+    importpath = "github.com/gnanda/crapchat/chatpage",
     deps = [
-        "//src/chatpage:chatpage",
-				"@com_github_net//:go_default_library",
+        ":chatpage",
     ],
 )
