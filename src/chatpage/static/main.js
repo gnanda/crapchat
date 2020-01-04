@@ -17,6 +17,11 @@ var Elements = {
     NEW_MESSAGE: 'message',
     SUBMIT: 'submit'
 };
+var MessageHandler = /** @class */ (function () {
+    function MessageHandler() {
+    }
+    return MessageHandler;
+}());
 var PageManager = /** @class */ (function () {
     function PageManager() {
         this.messages = null;
@@ -32,9 +37,11 @@ var PageManager = /** @class */ (function () {
         this.new_message = document.getElementById(Elements.NEW_MESSAGE);
         this.submit_button = document.getElementById(Elements.SUBMIT);
     };
-    PageManager.prototype.loadHandlers = function () {
+    PageManager.prototype.loadWebsocketListeners = function () {
+        var _this = this;
         this.ws.addEventListener('open', function (evt) {
             console.log("open " + JSON.stringify(evt));
+            _this.ws.send('yoyoyo');
         });
         this.ws.addEventListener('close', function (evt) {
             console.log("close " + JSON.stringify(evt));
@@ -46,11 +53,35 @@ var PageManager = /** @class */ (function () {
             console.log("message " + JSON.stringify(evt));
         });
     };
+    PageManager.prototype.loadHandlers = function () {
+        var _this = this;
+        document.getElementById('submit').onclick = function () { return _this.sendMessage(); };
+        /* this.submit_button.addEventListener('click', () => this.sendMessage, false); */
+    };
+    PageManager.prototype.sendMessage = function () {
+        if (!this.new_message) {
+            throw Error('new_message is null');
+        }
+        if (!this.ws) {
+            throw Error('ws is null');
+        }
+        var text = this.new_message.value;
+        if (!text) {
+            throw Error('No text');
+        }
+        this.new_message.value = '';
+        var message = {
+            'type': 'MESSAGE',
+            'value': text
+        };
+        this.ws.send(JSON.stringify(message));
+    };
     /**
       Load the page
     */
     PageManager.prototype.load = function () {
         this.loadElements();
+        this.loadWebsocketListeners();
         this.loadHandlers();
     };
     return PageManager;

@@ -22,10 +22,14 @@ const Elements = {
 	SUBMIT: 'submit',
 };
 
+class MessageHandler {
+
+}
+
 class PageManager {
-	messages: HTMLElement | null;
-	new_message: HTMLElement | null;
-	submit_button: HTMLElement | null;
+	messages: HTMLTextAreaElement | null;
+	new_message: HTMLInputElement | null;
+	submit_button: HTMLButtonElement | null;
 	ws: WebSocket;
 
 	constructor() {
@@ -39,14 +43,15 @@ class PageManager {
 	  Load the elements on the page
 	*/
 	loadElements() {
-		this.messages = document.getElementById(Elements.MESSAGES);
-		this.new_message = document.getElementById(Elements.NEW_MESSAGE);
-		this.submit_button = document.getElementById(Elements.SUBMIT);
+		this.messages = document.getElementById(Elements.MESSAGES) as HTMLTextAreaElement;
+		this.new_message = document.getElementById(Elements.NEW_MESSAGE) as HTMLInputElement;
+		this.submit_button = document.getElementById(Elements.SUBMIT) as HTMLButtonElement;
 	}
 
-	loadHandlers() {
+	loadWebsocketListeners() {
 		this.ws.addEventListener('open', (evt) => {
 			console.log(`open ${JSON.stringify(evt)}`);
+			this.ws.send('yoyoyo');
 		});
 
 		this.ws.addEventListener('close', (evt) => {
@@ -62,11 +67,36 @@ class PageManager {
 		});
 	}
 
+	loadHandlers() {
+		document.getElementById('submit').onclick = () => this.sendMessage();
+		/* this.submit_button.addEventListener('click', () => this.sendMessage, false); */
+	}
+
+	sendMessage() {
+		if (!this.new_message) {
+			throw Error('new_message is null');
+		}
+		if (!this.ws) {
+			throw Error('ws is null');
+		}
+		const text = this.new_message.value;
+		if (!text) {
+			throw Error('No text');
+		}
+		this.new_message.value = '';
+		const message = {
+			'type': 'MESSAGE',
+			'value': text,
+		}
+		this.ws.send(JSON.stringify(message));
+	}
+
 	/**
 	  Load the page
 	*/
 	load() {
 		this.loadElements();
+		this.loadWebsocketListeners();
 		this.loadHandlers();
 	}
 
