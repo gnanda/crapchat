@@ -13,35 +13,45 @@
 /* } */
 /* let	user = new Student('Someone', 'Else'); */
 var Elements = {
+    ERROR_MESSAGE: 'error_message',
     MESSAGES: 'messages',
     NEW_MESSAGE: 'message',
     SUBMIT: 'submit'
 };
-var MessageHandler = /** @class */ (function () {
-    function MessageHandler() {
+var Message = /** @class */ (function () {
+    function Message(type, content) {
+        this.type = type;
+        this.content = content;
     }
-    return MessageHandler;
+    return Message;
 }());
-var PageManager = /** @class */ (function () {
-    function PageManager() {
-        this.messages = null;
-        this.new_message = null;
-        this.submit_button = null;
-        this.ws = new WebSocket('ws://' + window.location.host + '/messages');
+// Manages websocket connection for sending and receiving messages
+var MessageHandler = /** @class */ (function () {
+    function MessageHandler(address) {
+        this.address = address;
+        this.ws = new WebSocket(this.address);
+        this.loadListeners();
+        this.startPings();
+        this.pingFrequency = 3000;
     }
-    /**
-      Load the elements on the page
-    */
-    PageManager.prototype.loadElements = function () {
-        this.messages = document.getElementById(Elements.MESSAGES);
-        this.new_message = document.getElementById(Elements.NEW_MESSAGE);
-        this.submit_button = document.getElementById(Elements.SUBMIT);
+    MessageHandler.prototype.startPings = function () {
+        var _this = this;
+        switch (this.ws.readyState) {
+            case WebSocket.OPEN:
+                this.sendMessage(new Message('PING', ''));
+                window.setTimeout(function () { return _this.startPings(); }, this.pingFrequency);
+                break;
+            case WebSocket.CONNECTING:
+                window.setTimeout(function () { return _this.startPings(); }, this.pingFrequency);
+                break;
+        }
     };
-    PageManager.prototype.loadWebsocketListeners = function () {
+    MessageHandler.prototype.loadListeners = function () {
         var _this = this;
         this.ws.addEventListener('open', function (evt) {
             console.log("open " + JSON.stringify(evt));
-            _this.ws.send('yoyoyo');
+            //this.ws.send('yoyoyo');
+            _this.startPings();
         });
         this.ws.addEventListener('close', function (evt) {
             console.log("close " + JSON.stringify(evt));
@@ -50,39 +60,65 @@ var PageManager = /** @class */ (function () {
             console.log("error " + JSON.stringify(evt));
         });
         this.ws.addEventListener('message', function (evt) {
-            console.log("message " + JSON.stringify(evt));
+            console.log("message " + JSON.stringify(evt) + " data: " + evt.data);
         });
     };
-    PageManager.prototype.loadHandlers = function () {
+    MessageHandler.prototype.sendMessage = function (message) {
+        this.ws.send(JSON.stringify(message));
+    };
+    return MessageHandler;
+}());
+// TODO Learn React???
+// Manages the elements on the page 
+var PageManager = /** @class */ (function () {
+    function PageManager() {
+        this.error_message = null;
+        this.messages = null;
+        this.new_message = null;
+        this.submit_button = null;
+        this.message_handler = new MessageHandler('ws://' + window.location.host + '/messages');
+    }
+    /**
+      Load the elements on the page
+    */
+    PageManager.prototype.loadElements = function () {
+        this.error_message = document.getElementById(Elements.ERROR_MESSAGE);
+        this.messages = document.getElementById(Elements.MESSAGES);
+        this.new_message = document.getElementById(Elements.NEW_MESSAGE);
+        this.submit_button = document.getElementById(Elements.SUBMIT);
+    };
+    PageManager.prototype.loadPageHandlers = function () {
         var _this = this;
-        document.getElementById('submit').onclick = function () { return _this.sendMessage(); };
-        /* this.submit_button.addEventListener('click', () => this.sendMessage, false); */
+        if (!this.submit_button) {
+            throw Error('Submit button is null');
+        }
+        this.submit_button.onclick = function () { return _this.sendMessage(); };
     };
     PageManager.prototype.sendMessage = function () {
         if (!this.new_message) {
             throw Error('new_message is null');
         }
-        if (!this.ws) {
-            throw Error('ws is null');
-        }
         var text = this.new_message.value;
         if (!text) {
+            this.displayError('Message is empty');
             throw Error('No text');
         }
+        var message = new Message('MESSAGE', text);
+        this.message_handler.sendMessage(message);
         this.new_message.value = '';
-        var message = {
-            'type': 'MESSAGE',
-            'value': text
-        };
-        this.ws.send(JSON.stringify(message));
+    };
+    PageManager.prototype.displayError = function (error_message) {
+        if (this.error_message == null) {
+            throw Error('error_message is null');
+        }
+        this.error_message.innerText = error_message;
     };
     /**
       Load the page
     */
     PageManager.prototype.load = function () {
         this.loadElements();
-        this.loadWebsocketListeners();
-        this.loadHandlers();
+        this.loadPageHandlers();
     };
     return PageManager;
 }());
