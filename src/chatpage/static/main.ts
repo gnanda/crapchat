@@ -23,15 +23,20 @@ const Elements = {
 	SUBMIT: 'submit',
 };
 
+const MessageTypes = {
+	NEW_MESSAGE: 'MESSAGE',
+	ACK: 'ACK',
+}
+
 class Message {
-	constructor(public type: string, public content: string) {}
+	constructor(public message_type: string, public content: string) {}
 }
 
 // Manages websocket connection for sending and receiving messages
 class MessageHandler {
 	private ws: WebSocket;
 	private pingFrequency: number;
-	constructor(private address: string) {
+	constructor(private address: string, private processMessage: (content: string) => void) {
 		this.ws = new WebSocket(this.address);
 		this.loadListeners();
 		this.startPings();
@@ -42,10 +47,10 @@ class MessageHandler {
 		switch (this.ws.readyState) {
 			case WebSocket.OPEN:
 				this.sendMessage(new Message('PING', ''));
-				window.setTimeout(() => this.startPings(), this.pingFrequency);
+				setTimeout(() => this.startPings(), this.pingFrequency);
 				break;
 			case WebSocket.CONNECTING:
-				window.setTimeout(() => this.startPings(), this.pingFrequency);
+				setTimeout(() => this.startPings(), this.pingFrequency);
 				break;
 		}
 	}
@@ -59,6 +64,7 @@ class MessageHandler {
 
 		this.ws.addEventListener('close', (evt) => {
 			console.log(`close ${JSON.stringify(evt)}`);
+			setTimeout(() => this.ws = new WebSocket(this.address), 1000);
 		});
 
 		this.ws.addEventListener('error', (evt) => {
@@ -67,7 +73,20 @@ class MessageHandler {
 
 		this.ws.addEventListener('message', (evt) => {
 			console.log(`message ${JSON.stringify(evt)} data: ${evt.data}`);
+			this.handleMessage(JSON.parse(evt.data) as Message);
 		});
+	}
+
+	handleMessage(message: Message) {
+		switch (message.message_type) {
+			case MessageTypes.NEW_MESSAGE:
+				this.processMessage(message.content);
+				break;
+			case MessageTypes.ACK:
+				break
+			default:
+				throw Error(`unknown message type ${message.message_type}`);
+		}
 	}
 
 	sendMessage(message: Message) {
@@ -90,7 +109,7 @@ class PageManager {
 		this.messages = null;
 		this.new_message = null;
 		this.submit_button = null;
-		this.message_handler = new MessageHandler('ws://' + window.location.host + '/messages');
+		this.message_handler = new MessageHandler('ws://' + window.location.host + '/messages', (content) => this.processMessage(content));
 	}
 
 	/**
@@ -108,6 +127,14 @@ class PageManager {
 			throw Error('Submit button is null');
 		}
 		this.submit_button.onclick = () => this.sendMessage();
+	}
+
+	processMessage(content: string) {
+		if (!this.messages) {
+			throw Error('messages is null');
+		}
+		this.messages.append('\r\n');
+		this.messages.append(content);
 	}
 
 	sendMessage() {

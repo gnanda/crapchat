@@ -18,17 +18,22 @@ var Elements = {
     NEW_MESSAGE: 'message',
     SUBMIT: 'submit'
 };
+var MessageTypes = {
+    NEW_MESSAGE: 'MESSAGE',
+    ACK: 'ACK'
+};
 var Message = /** @class */ (function () {
-    function Message(type, content) {
-        this.type = type;
+    function Message(message_type, content) {
+        this.message_type = message_type;
         this.content = content;
     }
     return Message;
 }());
 // Manages websocket connection for sending and receiving messages
 var MessageHandler = /** @class */ (function () {
-    function MessageHandler(address) {
+    function MessageHandler(address, processMessage) {
         this.address = address;
+        this.processMessage = processMessage;
         this.ws = new WebSocket(this.address);
         this.loadListeners();
         this.startPings();
@@ -39,10 +44,10 @@ var MessageHandler = /** @class */ (function () {
         switch (this.ws.readyState) {
             case WebSocket.OPEN:
                 this.sendMessage(new Message('PING', ''));
-                window.setTimeout(function () { return _this.startPings(); }, this.pingFrequency);
+                setTimeout(function () { return _this.startPings(); }, this.pingFrequency);
                 break;
             case WebSocket.CONNECTING:
-                window.setTimeout(function () { return _this.startPings(); }, this.pingFrequency);
+                setTimeout(function () { return _this.startPings(); }, this.pingFrequency);
                 break;
         }
     };
@@ -55,13 +60,26 @@ var MessageHandler = /** @class */ (function () {
         });
         this.ws.addEventListener('close', function (evt) {
             console.log("close " + JSON.stringify(evt));
+            setTimeout(function () { return _this.ws = new WebSocket(_this.address); }, 1000);
         });
         this.ws.addEventListener('error', function (evt) {
             console.log("error " + JSON.stringify(evt));
         });
         this.ws.addEventListener('message', function (evt) {
             console.log("message " + JSON.stringify(evt) + " data: " + evt.data);
+            _this.handleMessage(JSON.parse(evt.data));
         });
+    };
+    MessageHandler.prototype.handleMessage = function (message) {
+        switch (message.message_type) {
+            case MessageTypes.NEW_MESSAGE:
+                this.processMessage(message.content);
+                break;
+            case MessageTypes.ACK:
+                break;
+            default:
+                throw Error("unknown message type " + message.message_type);
+        }
     };
     MessageHandler.prototype.sendMessage = function (message) {
         this.ws.send(JSON.stringify(message));
@@ -72,11 +90,12 @@ var MessageHandler = /** @class */ (function () {
 // Manages the elements on the page 
 var PageManager = /** @class */ (function () {
     function PageManager() {
+        var _this = this;
         this.error_message = null;
         this.messages = null;
         this.new_message = null;
         this.submit_button = null;
-        this.message_handler = new MessageHandler('ws://' + window.location.host + '/messages');
+        this.message_handler = new MessageHandler('ws://' + window.location.host + '/messages', function (content) { return _this.processMessage(content); });
     }
     /**
       Load the elements on the page
@@ -93,6 +112,13 @@ var PageManager = /** @class */ (function () {
             throw Error('Submit button is null');
         }
         this.submit_button.onclick = function () { return _this.sendMessage(); };
+    };
+    PageManager.prototype.processMessage = function (content) {
+        if (!this.messages) {
+            throw Error('messages is null');
+        }
+        this.messages.append('\r\n');
+        this.messages.append(content);
     };
     PageManager.prototype.sendMessage = function () {
         if (!this.new_message) {

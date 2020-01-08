@@ -21,7 +21,7 @@ func main() {
 	handler := chatpage.New() //ChatServer{}
 	http.Handle("/", http.FileServer(http.Dir("src/chatpage/static")))
 	//http.HandleFunc("/send_message", handler.SendMessage)
-	http.HandleFunc("/messages", websocket.Handler(handler.HandleMessages).ServeHTTP)
+	http.HandleFunc("/messages", websocket.Handler(handler.HandleConnections).ServeHTTP)
 
 	ipaddr := net.JoinHostPort(*Host, strconv.Itoa(*Port))
 	log.Printf("listening on %s", ipaddr)
