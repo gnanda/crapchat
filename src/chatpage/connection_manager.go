@@ -17,6 +17,14 @@ func New() *ConnectionManager {
 	}
 }
 
+func (cm *ConnectionManager) GetMessageFromUser() {
+
+}
+
+func (cm *ConnectionManager) SendMessageToUser() {
+
+}
+
 func (cm *ConnectionManager) AddConnection(user string, c *websocket.Conn) {
 	_, ok := cm.clients[user]
 	if !ok {

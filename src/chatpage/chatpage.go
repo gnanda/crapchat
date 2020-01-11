@@ -10,26 +10,26 @@ import (
 	"strconv"
 
 	"github.com/gnanda/crapchat/connection_manager"
-	"github.com/gnanda/crapchat/message_handler"
+	"github.com/gnanda/crapchat/request_handler"
+	"github.com/gnanda/crapchat/message_router"
+	"github.com/gnanda/crapchat/messages"
 	"golang.org/x/net/websocket"
 )
 
 type ChatServer struct {
 	connectionManager *connection_manager.ConnectionManager
-	messageHandler    *message_handler.MessageHandler
+	requestHandler    *request_handler.RequestHandler
+	messageRouter *message_router.MessageRouter
+	//incoming 
 	// clients map[*websocket.Conn]bool
 	// messageQueue chan Message
-}
-
-type Message struct {
-	MessageType string `json:"message_type"`
-	Content     string `json:"content"`
 }
 
 func New() ChatServer {
 	s := ChatServer{
 		connectionManager: connection_manager.New(),
-		messageHandler:    message_handler.New(),
+		requestHandler:    request_handler.New(),
+		messageRouter:	message_router.New(),
 	}
 	return s
 }
@@ -38,28 +38,77 @@ func (s *ChatServer) GetUser() string {
 	return "someuser" + strconv.Itoa(rand.Int())
 }
 
-func (s *ChatServer) HandleConnections(c *websocket.Conn) {
-	user := s.GetUser()
-	s.connectionManager.AddConnection(user, c)
-	defer s.connectionManager.RemoveConnection(user, c)
-	for {
-		var data Message
+func (s *ChatServer) receiveMessage(c *websocket.Conn, incomingMessages chan bool) {
+		var data messages.ClientRequest
 		err := websocket.JSON.Receive(c, &data)
 		if err != nil {
 			log.Printf("Failed to read message: %s", err)
 			return
 		}
 		log.Printf("Got message: %+v", data)
-		// Handle message here.  How do I add in the stuff to send messages down to client???
-		response := Message{
-			MessageType: "MESSAGE",
-			Content:     "</textarea><script>alert('hi');<script>",
-		}
-		err = websocket.JSON.Send(c, response)
+		m, err := messages.ParseRequest(data)
 		if err != nil {
-			log.Fatalf("Failed to send response: %s", err)
+			log.Printf("Failed to parse message: %s", err)
 			return
 		}
+		resp, err := s.requestHandler.HandleRequest(m)
+		if err != nil {
+			log.Printf("Failed to handle message: %s", err)
+			return
+		}
+		if resp != nil {
+			clientResponse, err := messages.EncodeResponse(*resp)
+			if err != nil {
+				log.Printf("Failed to encode response: %s", err)
+				return
+			}
+			err = websocket.JSON.Send(c, clientResponse)
+			if err != nil {
+				log.Fatalf("Failed to send response: %s", err)
+				return
+			}
+		}
+		incomingMessages <- true
+}
+
+func (s *ChatServer) HandleConnections(c *websocket.Conn) {
+	user := s.GetUser()
+	s.connectionManager.AddConnection(user, c)
+	defer s.connectionManager.RemoveConnection(user, c)
+	incomingMessages := make(chan bool)
+	for {
+		select {
+		case <- incomingMessages:
+			log.Printf("Handled a message")
+		case response, err := <-s.messageRouter.GetMessages(user):
+			if err != nil {
+				log.Printf("Failed to get message: %s", err)
+				return
+			}
+			clientResponse, err := messages.EncodeResponse(response)
+			if err != nil {
+				log.Printf("Failed to encode response: %s", err)
+				return
+			}
+			err = websocket.JSON.Send(c, clientResponse)
+			if err != nil {
+				log.Fatalf("Failed to send response: %s", err)
+				return
+			}
+
+		}
+
+//
+//		// Handle message here.  How do I add in the stuff to send messages down to client???
+//		response := clientMessage{
+//			MessageType: "MESSAGE",
+//			Content:     "</textarea><script>alert('hi');<script>",
+//		}
+//		err = websocket.JSON.Send(c, response)
+//		if err != nil {
+//			log.Fatalf("Failed to send response: %s", err)
+//			return
+//		}
 	}
 	// var tmp string
 	// fmt.Scan(c, &s)

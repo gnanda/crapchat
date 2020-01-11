@@ -1,9 +1,10 @@
-package message_handler
+package request_handler
 
 import (
 	// "log"
 
 	"github.com/gnanda/crapchat/messages"
+	"github.com/gnanda/crapchat/message_router"
 )
 
 type RequestHandler struct {
